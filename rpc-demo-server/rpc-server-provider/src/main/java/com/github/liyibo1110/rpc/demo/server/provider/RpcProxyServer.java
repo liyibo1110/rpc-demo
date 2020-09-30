@@ -11,7 +11,7 @@ import java.util.concurrent.Executors;
  */
 public class RpcProxyServer {
 
-    ExecutorService executorService = Executors.newCachedThreadPool();
+    /*ExecutorService executorService = Executors.newCachedThreadPool();
 
     public void publisher(Object service, int port) {
 
@@ -34,5 +34,5 @@ public class RpcProxyServer {
                 }
             }
         }
-    }
+    }*/
 }
