@@ -1,6 +1,5 @@
 package com.github.liyibo1110.rpc.demo.server.provider;
 
-import com.github.liyibo1110.rpc.demo.server.provider.annotation.RpcService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -13,7 +12,7 @@ import org.springframework.context.annotation.Configuration;
 public class SpringConfig {
 
     @Bean(name="rpcServer")
-    public RpcServer getRpcServer() {
-        return new RpcServer(8080);
+    public NioRpcServer getRpcServer() {
+        return new NioRpcServer(8080);
     }
 }

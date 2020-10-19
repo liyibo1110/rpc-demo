@@ -1,31 +1,64 @@
 package com.github.liyibo1110.rpc.demo.server.provider;
 
 import com.github.liyibo1110.rpc.demo.server.api.RpcRequest;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.Socket;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * @author liyibo
  */
-public class ProcessorHandler implements Runnable {
+public class ProcessorHandler extends SimpleChannelInboundHandler<RpcRequest> {
 
-    private Socket socket;
     private Map<String, Object> handlerMap;
 
-    public ProcessorHandler(Socket socket, Map<String, Object> handlerMap) {
-        this.socket = socket;
+    public ProcessorHandler(Map<String, Object> handlerMap) {
         this.handlerMap = handlerMap;
     }
 
-    public void run() {
+    @Override
+    protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcRequest rpcRequest) throws Exception {
+        Object result = invoke(rpcRequest);
+        channelHandlerContext.writeAndFlush(result).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private Object invoke(RpcRequest request) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+
+        String serviceName = request.getClassName();
+        String version = request.getVersion();
+        if(!StringUtils.isEmpty(version)) {
+            serviceName = serviceName + "-" + version;
+        }
+
+        Object service = handlerMap.get(serviceName);
+        if(service == null) {
+            throw new RuntimeException("service not found: " + serviceName);
+        }
+
+        Object[] arguments = request.getArguments();
+        Method method;
+        if(arguments == null) {
+            Class clazz = Class.forName(request.getClassName());
+            method = clazz.getMethod(request.getMethodName());
+        }else {
+            Class[] types = new Class[arguments.length];
+            for (int i = 0; i < types.length; i++) {
+                types[i] = arguments[i].getClass();
+            }
+            Class clazz = Class.forName(request.getClassName());
+            method = clazz.getMethod(request.getMethodName(), types);
+        }
+
+        Object result = method.invoke(service, arguments);
+        return result;
+    }
+
+   /* public void run() {
 
         ObjectInputStream ois = null;
         ObjectOutputStream oos = null;
@@ -64,36 +97,5 @@ public class ProcessorHandler implements Runnable {
                 }
             }
         }
-    }
-
-    private Object invoke(RpcRequest request) throws ClassNotFoundException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-
-        String serviceName = request.getClassName();
-        String version = request.getVersion();
-        if(!StringUtils.isEmpty(version)) {
-            serviceName = serviceName + "-" + version;
-        }
-
-        Object service = handlerMap.get(serviceName);
-        if(service == null) {
-            throw new RuntimeException("service not found: " + serviceName);
-        }
-
-        Object[] arguments = request.getArguments();
-        Method method;
-        if(arguments == null) {
-            Class clazz = Class.forName(request.getClassName());
-            method = clazz.getMethod(request.getMethodName());
-        }else {
-            Class[] types = new Class[arguments.length];
-            for (int i = 0; i < types.length; i++) {
-                types[i] = arguments[i].getClass();
-            }
-            Class clazz = Class.forName(request.getClassName());
-            method = clazz.getMethod(request.getMethodName(), types);
-        }
-
-        Object result = method.invoke(service, arguments);
-        return result;
-    }
+    }*/
 }
